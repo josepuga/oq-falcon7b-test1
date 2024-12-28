@@ -6,7 +6,7 @@ MODEL_NAME="falcon7b"
 LOG_FILE="$MODEL_NAME-$(date +%y%m%d-%H%M%S).log"
 CONFIG_FILE="$MODEL_NAME-config.json"
 
-UVICORN_PORT=8088
+UVICORN_PORT=8089
 UVICORN_HOST=127.0.0.1 # Usar 0.0.0.0 para broadcast
 UVICORN_URL="http://127.0.0.1:$UVICORN_PORT/chat"
 
@@ -23,7 +23,7 @@ echo "Sesión guardada en $LOG_FILE. Usar CTR-C para salir"
 if [[ ! -f "$CONFIG_FILE" ]]; then
     cat > "$CONFIG_FILE" <<EOF
 {
-    "max_new_tokens": 200,
+    "max_new_tokens": 50,
     "repetition_penalty": 1.2,
     "temperature": 0.7,
     "top_p": 0.9
@@ -32,14 +32,11 @@ EOF
     echo "Archivo de configuración creado: $CONFIG_FILE"
 fi
 
-set -x
-
 uvicorn "$MODEL_NAME:app" \
     --host $UVICORN_HOST \
     --port $UVICORN_PORT \
     --reload &>/dev/null & # Quitar la redireccion null para depurar.
 UVICORN_PID=$!
-echo "Proceso: $UVICORN_PID"
 
 #Comprobar que el servidor FastAPI se haya lanzado
 if [[ -z "$UVICORN_PID" || "$UVICORN_PID" -le 0 ]]; then
@@ -56,13 +53,16 @@ Cleanup() {
 # Capturar CTRL-C para cerrar el uvicron
 trap Cleanup SIGINT
 
-# Pausa de 1 segundo para darle tiempo a uvicorn a lanzarse
-sleep 1
-echo ""
+# Enviar peiticiones al servidor hasta que esté listo.
+echo -n "Esperando servidor Uvicorn..."
+until curl -s "$UVICORN_URL" &> /dev/null; do
+    sleep 1
+done
+echo "LISTO!".
 
 while read -r -p ">" line
 do
-    printf ">%s\n" "$line" >> "$LOG_FILE"
+    printf "\n>%s\n" "$line" >> "$LOG_FILE"
 
     # Antes de enviar la linea, leemos los parámetros del modelo del json
     max_new_tokens=$(jq -r '.max_new_tokens' "$CONFIG_FILE")
@@ -75,7 +75,7 @@ do
     model_info="max_tok=$max_new_tokens. rep_pen=$repetition_penalty. temp=$temperature. top_p=$top_p"
     echo "$model_info" | tee -a "$LOG_FILE"
 
-    json_response=$(curl -X POST "$UVICORN_URL" \
+    json_response=$(curl -s -X POST "$UVICORN_URL" \
         -H "Content-Type: application/json" \
         -d "{
             \"prompt\": \"$line\",

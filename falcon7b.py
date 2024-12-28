@@ -2,14 +2,24 @@ import json
 from fastapi import FastAPI, Body
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
+### RENDIMIENTO ####
+# Configuración mía, aprovecho todos mis cores para acelerar el proceso.
+import torch
+torch.set_num_threads(24)
+
+
 app = FastAPI()
 
 model_name = "tiiuae/falcon-7b"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True, device_map="auto")
+model = AutoModelForCausalLM.from_pretrained(model_name,
+    torch_dtype=torch.float16, # Usar menor precisión
+    device_map="auto"
+)
 
 def load_config():
-    with open("config.json", "r") as f:
+    #TODO: Check open file
+    with open("falcon7b-config.json", "r") as f:
         return json.load(f)
 
 @app.post("/chat")
@@ -28,7 +38,8 @@ async def chat(prompt: str = Body(..., embed=True)):
         max_new_tokens=max_new_tokens,
         repetition_penalty=repetition_penalty,
         temperature=temperature,
-        top_p=top_p
+        top_p=top_p,
+        do_sample=True # Necesario para usar temprerature y top_p
     )
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return {"response": response}
