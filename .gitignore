@@ -1,0 +1,4 @@
+NOTAS.txt
+__pycache__/
+venv/
+*.log
