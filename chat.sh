@@ -53,12 +53,13 @@ Cleanup() {
 # Capturar CTRL-C para cerrar el uvicron
 trap Cleanup SIGINT
 
-# Enviar peiticiones al servidor hasta que esté listo.
+# Enviar peticiones al servidor hasta que esté listo.
 echo -n "Esperando servidor Uvicorn..."
 until curl -s "$UVICORN_URL" &> /dev/null; do
     sleep 1
 done
-echo "LISTO!".
+echo "LISTO!"
+echo ""
 
 while read -r -p ">" line
 do
@@ -88,4 +89,5 @@ do
 
     response=$(echo "$json_response" | jq -r '.response')
     printf "\nBot: %s\n" "$response" | tee -a "$LOG_FILE"
+    echo ""
 done
