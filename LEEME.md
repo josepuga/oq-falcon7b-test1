@@ -34,8 +34,8 @@ Bastante portable, basta tener un linux con python y seguir las instrucciones.
 
 ## Instrucciones
 ```bash
-git clone https://github.com/josepuga/oq-test-falcon7b
-cd oq-test-falcon7b
+git clone https://github.com/josepuga/oq-falcon7b-test1
+cd oq-falcon7b-test1
 source ./setup.sh
 ``` 
 
